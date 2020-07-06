@@ -28,16 +28,6 @@ for index in range(NodeCoordinatesLine, NPOIN+NodeCoordinatesLine-1):
     if i // 65 < (65 - xOffset): # Do not change
         continue
 
-    #xNode = (i ) // nNode # 60/64
-    #yNode = i % mNode
-
-    #xCoord = float(xNode)/float(nNode-1)
-    #yCoord = float(yNode)/float(mNode-1)
-    #xCoord_new =  xLength * xCoord 
-    #                  (50    -    (65  -  20) / 20 (5/20) *    
-    #xCoord_new = xZero + ( (i//65 - ( nNode - xOffset )) / xOffset) * (0.3048 - xZero)
-    #yCoord_new =  yLength * yCoord  
-
     if i % 65 < (65 - yOffset) or i % 65 == 64:
         continue
  # ToDo: odejmij co drugi
