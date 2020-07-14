@@ -1,9 +1,15 @@
-target = 50
+target = 68
 epsilon = 0.01
 #kappa = 0.000000000001
 kappa = 0.000000001
+#xOffset = 44 # X==0
 xOffset = 44
 yOffset = 2
+mode = "default" # "default", "constant"
+
+#mode = "constant"
+#maxC=0.000016064370512998453
+#yConstant = maxC * 0.9
 
 import numpy as np
 
@@ -46,6 +52,7 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
     x_bottom_right, y_bottom_right, i_bottom_right = su2[index+1 + hop].split("\t")
     x_bottom_right, y_bottom_right, i_bottom_right = (float(x_bottom_right), float(y_bottom_right), int(i_bottom_right))
 
+
     if i_middle_left // 65 < (65 - xOffset-1): # Do not change
         continue
 
@@ -61,9 +68,14 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
     # D9 
     # deltaY         E9  
 
-    deltaY = 0
-    nonOrto = 0
-    while target - np.abs(nonOrto) > epsilon or  not np.abs(nonOrto) > target:
+    if mode == "constant":
+
+        if flag:
+            deltaY = yConstant
+        else:
+            deltaY = -yConstant
+        
+
         ys1 = ((1/2)*y_middle_left*y_middle_left+((1/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
         xs1 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*y_middle_left+((2/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
         ys2 = (((1/2)*(y_top_left-y_middle_right)+y_middle_left+deltaY)*(y_top_left-y_middle_right)+((2/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_top_left-y_middle_right+(1/2)*deltaY)
@@ -73,15 +85,35 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
         katPochKomorki = np.arctan((y_middle_right-y_middle_left)/(x_middle_right-x_middle_left)) * 180 / np.pi
 
         nonOrto = katDo90 - katPochKomorki
+    else:
+        deltaY = 0
+        nonOrto = 0
+        while target - np.abs(nonOrto) > epsilon or  not np.abs(nonOrto) > target:
+            ys1 = ((1/2)*y_middle_left*y_middle_left+((1/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
+            xs1 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*y_middle_left+((2/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
+            ys2 = (((1/2)*(y_top_left-y_middle_right)+y_middle_left+deltaY)*(y_top_left-y_middle_right)+((2/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_top_left-y_middle_right+(1/2)*deltaY)
+            xs2 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*(y_top_left-y_middle_right)+((1/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_top_left-y_middle_right+(1/2)*deltaY)
 
-        if flag:
-            deltaY += kappa
-        else:
-            deltaY -= kappa
-        
-        print(nonOrto)
+            katDo90 = np.arctan((xs1-xs2)/(ys2-ys1)) * 180 / np.pi
+            katPochKomorki = np.arctan((y_middle_right-y_middle_left)/(x_middle_right-x_middle_left)) * 180 / np.pi
+
+            nonOrto = katDo90 - katPochKomorki
+
+            if flag:
+                deltaY += kappa
+            else:
+                deltaY -= kappa
+            
+        # print(f"nonOrto {nonOrto} newCoord: {y_middle_left + deltaY}  y_top_right: {y_top_right}" )
+            #print(f"nonOrto {nonOrto}" )
+            if(y_middle_left + deltaY > y_top_right or y_middle_left + deltaY < 0):
+                print("Motyla noga")
     
-    yCoord_new = y_middle_left + deltaY
+
+    if mode == "constant":
+        yCoord_new = y_middle_right + deltaY
+    else:
+        yCoord_new = y_middle_left + deltaY
     
     if flag:
         flag = False
