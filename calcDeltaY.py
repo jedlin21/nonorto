@@ -27,10 +27,16 @@ for index, (x_middle_left, x_middle_right, y_middle_right, y_top_left ) in enume
         ys2 = (((1/2)*(y_top_left-y_middle_right)+y_middle_left+deltaY)*(y_top_left-y_middle_right)+((2/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_top_left-y_middle_right+(1/2)*deltaY)
         xs2 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*(y_top_left-y_middle_right)+((1/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_top_left-y_middle_right+(1/2)*deltaY)
 
-        katDo90 = np.arctan((xs1-xs2)/(ys2-ys1)) * 180 / np.pi
-        katPochKomorki = np.arctan((y_middle_right-y_middle_left)/(x_middle_right-x_middle_left)) * 180 / np.pi
+        # katDo90 = np.arctan((xs1-xs2)/(ys2-ys1)) * 180 / np.pi
+        # katPochKomorki = np.arctan((y_middle_right-y_middle_left)/(x_middle_right-x_middle_left)) * 180 / np.pi
+        # nonOrto = katDo90 - katPochKomorki
 
-        nonOrto = katDo90 - katPochKomorki
+        srodekX = x_middle_left+0.5*(x_middle_right-x_middle_left)
+        srodekY = y_middle_left+0.5*(y_middle_right-y_middle_left)
+        normalizacja = np.sqrt((x_middle_right-srodekX)**2+(y_middle_right-srodekY)**2)*np.sqrt((ys1-srodekY)**2+(xs1-srodekX)**2)
+        cosBeta = (-(x_middle_right-srodekX)*(ys1-srodekY)+(y_middle_right-srodekY)*(xs1-srodekX))/normalizacja
+        nonOrto = np.arccos(cosBeta) * 180 / np.pi
+
 
         if flag:
             deltaY += kappa
