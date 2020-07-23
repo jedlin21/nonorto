@@ -1,12 +1,12 @@
 target = 80
 target_cos = 0.4
-epsilon = 0.001
+epsilon = 0.1
 #kappa = 0.000000000001
 kappa = 0.000000001
 #xOffset = 44 # X==0
 xOffset = 44
 yOffset = 2
-mode = "fsolve" # "default", "constant", "experiment", "fsolve"
+mode = "experiment" # "default", "constant", "experiment", "fsolve"
 
 #mode = "constant"
 maxC=0.000016064370512998453
@@ -59,21 +59,22 @@ def func_v2(deltaY, data, target):
     xs1 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*y_middle_left+((2/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
     ys2 = (((1/2)*(y_top_left-yCoord_new)+y_middle_left+deltaY)*(y_top_left-yCoord_new)+((2/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_top_left-yCoord_new+(1/2)*deltaY)
     xs2 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*(y_top_left-yCoord_new)+((1/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_top_left-yCoord_new+(1/2)*deltaY)
-
-    # katDo90 = np.arctan((xs1-xs2)/(ys2-ys1)) * 180 / np.pi
-    # katPochKomorki = np.arctan((yCoord_new-y_middle_left)/(x_middle_right-x_middle_left)) * 180 / np.pi
-    # nonOrto = katDo90 - katPochKomorki
-
-    srodekX = x_middle_left+0.5*(x_middle_right-x_middle_left)
-    srodekY = y_middle_left+0.5*(yCoord_new-y_middle_left)
+    
+    a1 = deltaY/(x_middle_right-x_middle_left)
+    b1 = yCoord_new-a1*x_middle_right
+    a2 = (ys1-ys2)/(xs1-xs2)
+    b2 = ys1-a2*xs1 
+    
+    srodekX = (b2-b1)/(a1-a2)
+    srodekY = a1*srodekX+b1
     normalizacja = np.sqrt((x_middle_right-srodekX)**2+(yCoord_new-srodekY)**2)*np.sqrt((ys1-srodekY)**2+(xs1-srodekX)**2)
+    
     cosBeta = (-(x_middle_right-srodekX)*(ys1-srodekY)+(yCoord_new-srodekY)*(xs1-srodekX))/normalizacja
     nonOrto = np.arccos(cosBeta) * 180 / np.pi
 
     x = (x_middle_right-srodekX)*(xs1-srodekX) + (y_middle_right-srodekY)*(ys1-srodekY)
     nonOrto *= copysign(1, x) 
 
-    yCoord_new = y_middle_left + deltaY
     if yCoord_new > y_top_right  or y_bottom_right > yCoord_new:
         return 10^9
     else:
@@ -165,21 +166,36 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
         
         nonOrto = 0
         cosBeta = 0
-        while not np.isclose(target_cos, np.abs(cosBeta), atol=epsilon):
-            
+        # while not np.isclose(target_cos, np.abs(cosBeta), atol=epsilon):
+        while not np.isclose(target, np.abs(nonOrto), atol=epsilon):
             if flag:
                 deltaY -= kappa
             else:
                 deltaY += kappa
             yCoord_new = y_middle_left + deltaY
 
+
+            
             # x_middle_left  B8
             # x_middle_right B9
             # y_middle_left  C8 
             # y_middle_right C9 -- yCoord_new
-            # y_top_left     D8
-            # D9 
             # deltaY         E9
+            # 
+            # ys1            F8
+            # xs1            G8   
+            # ys2            H8   
+            # xs2            I8   
+            # a1             N8
+            # b1             O8
+            # a2             P8
+            # b2             Q8
+            # ys2            H8
+            # srodekX        R8
+            # srodekY        S8
+            # normalizacja   T8
+            # cosBeta        U8
+
             ys1 = ((1/2)*y_middle_left*y_middle_left+((1/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
             xs1 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*y_middle_left+((2/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
             ys2 = (((1/2)*(y_top_left-yCoord_new)+y_middle_left+deltaY)*(y_top_left-yCoord_new)+((2/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_top_left-yCoord_new+(1/2)*deltaY)
@@ -188,10 +204,18 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
             # katDo90 = np.arctan((xs1-xs2)/(ys2-ys1)) * 180 / np.pi
             # katPochKomorki = np.arctan((yCoord_new-y_middle_left)/(x_middle_right-x_middle_left)) * 180 / np.pi
             # nonOrto = katDo90 - katPochKomorki
+            
+            
+            a1 = deltaY/(x_middle_right-x_middle_left)
+            b1 = yCoord_new-a1*x_middle_right
+            a2 = (ys1-ys2)/(xs1-xs2)
+            b2 = ys1-a2*xs1 
 
-            srodekX = x_middle_left+0.5*(x_middle_right-x_middle_left)
-            srodekY = y_middle_left+0.5*(yCoord_new-y_middle_left)
+            
+            srodekX = (b2-b1)/(a1-a2)
+            srodekY = a1*srodekX+b1
             normalizacja = np.sqrt((x_middle_right-srodekX)**2+(yCoord_new-srodekY)**2)*np.sqrt((ys1-srodekY)**2+(xs1-srodekX)**2)
+            
             cosBeta = (-(x_middle_right-srodekX)*(ys1-srodekY)+(yCoord_new-srodekY)*(xs1-srodekX))/normalizacja
             nonOrto = np.arccos(cosBeta) * 180 / np.pi
 
