@@ -1,12 +1,13 @@
-target = 80
+target = 77 # 80ok
 target_cos = 0.4
-epsilon = 0.1
+epsilon = 4
 #kappa = 0.000000000001
 kappa = 0.000000001
 #xOffset = 44 # X==0
-xOffset = 44
-yOffset = 2
+xOffset = 10
+yOffset = 1000
 mode = "experiment" # "default", "constant", "experiment", "fsolve"
+A = 1.721 # constant 0.664, 1.721, 5.0
 
 #mode = "constant"
 maxC=0.000016064370512998453
@@ -59,10 +60,15 @@ def func_v2(deltaY, data, target):
     xs1 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*y_middle_left+((2/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
     ys2 = (((1/2)*(y_top_left-yCoord_new)+y_middle_left+deltaY)*(y_top_left-yCoord_new)+((2/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_top_left-yCoord_new+(1/2)*deltaY)
     xs2 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*(y_top_left-yCoord_new)+((1/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_top_left-yCoord_new+(1/2)*deltaY)
-    
+
     a1 = deltaY/(x_middle_right-x_middle_left)
     b1 = yCoord_new-a1*x_middle_right
-    a2 = (ys1-ys2)/(xs1-xs2)
+    try:
+        a2 = (ys1-ys2)/(xs1-xs2)
+    except:
+        print(xs1)
+        print(xs2)
+        pass    
     b2 = ys1-a2*xs1 
     
     srodekX = (b2-b1)/(a1-a2)
@@ -80,25 +86,27 @@ def func_v2(deltaY, data, target):
     else:
         return nonOrto - target
 
-nNode = 65
-mNode = 65
+nNode = 51
+mNode = 321
+hop = 321
 xLength = 0.3048
 yLength= 0.03
-NPOIN= 4225
-NodeCoordinatesLine = 4099
+NPOIN= nNode*mNode
+NodeCoordinatesLine = (nNode-1)*(mNode-1) + 3
 
-with open("su2_original/mesh_flatplate_65x65.su2") as f:
+with open("su2_original/mesh.su2") as f:
     su2 = f.readlines()
 
-xZero = float(su2[NodeCoordinatesLine +  65 * (65-xOffset) - 1].split("\t")[0])
-yZero = float(su2[NodeCoordinatesLine +  65 * (65-xOffset) - 1].split("\t")[1])
-iZero = float(su2[NodeCoordinatesLine +  65 * (65-xOffset) - 1].split("\t")[2])
+
+xZero = float(su2[NodeCoordinatesLine +  mNode * (nNode-xOffset) - 1].split("\t")[0])
+yZero = float(su2[NodeCoordinatesLine +  mNode * (nNode-xOffset) - 1].split("\t")[1])
+iZero = float(su2[NodeCoordinatesLine +  mNode * (nNode-xOffset) - 1].split("\t")[2])
 print(xZero)
 print(iZero)
 print(yZero)
 
 flag = True
-for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # TODO: -1 -65??????? check it
+for index in range(NodeCoordinatesLine+mNode, NPOIN+NodeCoordinatesLine-1 - mNode): 
     x_top_left, y_top_left, i_top_left = su2[index-1].split("\t")
     x_top_left, y_top_left, i_top_left = (float(x_top_left), float(y_top_left), int(i_top_left))
     
@@ -108,8 +116,8 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
     x_bottom_left, y_bottom_left, i_bottom_left = su2[index+1].split("\t")
     x_bottom_left, y_bottom_left, i_bottom_left = (float(x_bottom_left), float(y_bottom_left), int(i_bottom_left))
 
-    hop = 65
-
+    
+    
     x_top_right, y_top_right, i_top_right = su2[index-1 + hop].split("\t")
     x_top_right, y_top_right, i_top_right = (float(x_top_right), float(y_top_right), int(i_top_right))
     
@@ -119,13 +127,23 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
     x_bottom_right, y_bottom_right, i_bottom_right = su2[index+1 + hop].split("\t")
     x_bottom_right, y_bottom_right, i_bottom_right = (float(x_bottom_right), float(y_bottom_right), int(i_bottom_right))
 
-
-    if i_middle_left // 65 < (65 - xOffset-1): # Do not change
+    if i_middle_left // mNode < (nNode - xOffset-1):
         continue
 
-    if i_middle_left % 65 < (65 - yOffset) or i_middle_left % 65 == 64:
+    if i_middle_left % mNode < (mNode - yOffset) or i_middle_left % mNode == mNode-1:
         continue
 
+    if i_middle_left % mNode % 2 == 0:
+        continue
+
+    
+
+    y_node = y_top_left
+    x_node = x_bottom_left
+    # print(x_node)
+    # print(f"{y_node}   ?=   {A * 4.572 * np.e ** (-4) * np.sqrt(x_node)}")
+    if y_node > A * 4.572 * 10 ** (-4) * np.sqrt(x_node):
+        continue
     data = dict()
     data["y_top_left"] = y_top_left 
     data["x_middle_left"] = x_middle_left 
@@ -159,22 +177,22 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
         nonOrto = katDo90 - katPochKomorki
     elif mode == "experiment":
         if flag:
-            deltaY = y_top_left - y_middle_left - 0.000001
+            deltaY = y_top_left - y_middle_left - kappa
         else:
-            deltaY = y_bottom_left - y_middle_left + 0.000001
+            deltaY = y_bottom_left - y_middle_left + kappa
        # print(f"check: {y_middle_left + deltaY}")
         
         nonOrto = 0
+        startOrto = 0
         cosBeta = 0
         # while not np.isclose(target_cos, np.abs(cosBeta), atol=epsilon):
+        start = True
         while not np.isclose(target, np.abs(nonOrto), atol=epsilon):
             if flag:
                 deltaY -= kappa
             else:
                 deltaY += kappa
             yCoord_new = y_middle_left + deltaY
-
-
             
             # x_middle_left  B8
             # x_middle_right B9
@@ -208,7 +226,14 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
             
             a1 = deltaY/(x_middle_right-x_middle_left)
             b1 = yCoord_new-a1*x_middle_right
-            a2 = (ys1-ys2)/(xs1-xs2)
+            try:
+                a2 = (ys1-ys2)/(xs1-xs2)
+            except:
+                print(xs1)
+                print(xs2)
+                print(nonOrto)
+                continue
+                
             b2 = ys1-a2*xs1 
 
             
@@ -218,16 +243,17 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
             
             cosBeta = (-(x_middle_right-srodekX)*(ys1-srodekY)+(yCoord_new-srodekY)*(xs1-srodekX))/normalizacja
             nonOrto = np.arccos(cosBeta) * 180 / np.pi
-
-            
-            
+            if start:
+                start = False
+                startOrto = nonOrto
         # print(f"nonOrto {nonOrto} newCoord: {y_middle_left + deltaY}  y_top_right: {y_top_right}" )
-            #print(f"nonOrto {nonOrto}" )
+           # print(f"nonOrto {nonOrto}" )
+            
             if(y_middle_left + deltaY > y_top_right or y_middle_left + deltaY < 0):
                 if flag:
-                    deltaY = y_bottom_left - y_middle_left + 0.0000001
+                    deltaY = y_bottom_left - y_middle_left + kappa
                 else:
-                    deltaY = y_top_left - y_middle_left - 0.0000001
+                    deltaY = y_top_left - y_middle_left - kappa
                 print("Motyla noga")
                 ys1 = ((1/2)*y_middle_left*y_middle_left+((1/3)*deltaY+y_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
                 xs1 = (((1/2)*(x_middle_right-x_middle_left)+x_middle_left)*y_middle_left+((2/3)*(x_middle_right-x_middle_left)+x_middle_left)*(1/2)*deltaY)/(y_middle_left+(1/2)*deltaY)
@@ -238,6 +264,8 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
                 katPochKomorki = np.arctan((y_middle_right-y_middle_left)/(x_middle_right-x_middle_left)) * 180 / np.pi
 
                 nonOrto = katDo90 - katPochKomorki
+                print(f"nonOrto {nonOrto}" )
+                print(f"startOrto {startOrto}" )
                 break
     elif mode == "fsolve":
         if flag:
@@ -310,7 +338,7 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
     #print(f"{i} {y} {yCoord_new} {y_bottom_left}")
     #print(index)
     # print(i_bottom_left)
-    print(f"{x_top_left};{y_middle_left};{y_top_left}")
+    print(f"{x_top_left};{y_middle_left};{y_top_left};non:{nonOrto}; start:{startOrto}")
     # print(f"x_top_left: {x_top_left};\ty_top_left: {y_top_left}")
     # print(f"x_middle_left: {x_middle_left};\ty_middle_left: {y_middle_left}")
     # print(f"x_bottom_left: {x_bottom_left};\ty_bottom_left: {y_bottom_left}")
@@ -327,6 +355,6 @@ for index in range(NodeCoordinatesLine+65, NPOIN+NodeCoordinatesLine-1 - 65): # 
         break
     su2[index + hop] = ("%.16e \t %.16e \t %s\n" % (x_middle_right, yCoord_new, i_middle_right))
 
-with open("su2_modified/mesh_flatplate_65x65.su2", "w") as f:
+with open("su2_original/mesh80.su2", "w") as f:
     f.write("".join(su2))
 
